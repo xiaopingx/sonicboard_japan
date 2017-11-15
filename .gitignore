@@ -19,5 +19,6 @@ USER/*.dep
 USER/*.Administrator
 USER/*.bak
 USER/*.uvgui*
+USER/*.scvd
 *uvopt
 *.TMP

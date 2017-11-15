@@ -420,8 +420,14 @@ void SONIC_send_cmd(Typedef_SONIC *sonic)
 	else
 		OUTPUT_CUP_FULL = 0;
 	//是否存在水杯输出
-	if(SONIC.physiccup.exist && TIMEPARAM.level.level != SONIC_ERROR_VALUE)
-		OUTPUT_CUP_EXIST = 1;
+	if(SONIC.physiccup.exist){
+        if(TIMEPARAM.level.level == SONIC_ERROR_VALUE){
+            if(sonic->cmd.cmd == SONIC_CMD_00)
+                OUTPUT_CUP_EXIST = 1;
+            else
+                OUTPUT_CUP_EXIST = 0;
+        }else OUTPUT_CUP_EXIST = 1;
+    }
 	else
 		OUTPUT_CUP_EXIST = 0;
 }
