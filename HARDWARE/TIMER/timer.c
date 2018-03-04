@@ -73,8 +73,17 @@ void TMR1_IRQHandler(void)
 				SONIC.cmd.detect.bit[1] = 1;
 			}
 		}
-/*********************************************************************/		
-		if(IS_PHYSIC_CUP_INPUT == 0){
+/*********************************************************************/
+		/*
+			The Sonic board for Japan:
+				CUP_EXIST		:	0
+				CUP_DONT_EXIST	:	1
+			The Sonic board for Demestic
+				CUP_EXIST		:	0
+				CUP_DONT_EXIST	:	1
+		*/
+		if(IS_PHYSIC_CUP_INPUT == !CUP_EXIST){
+			//CUP Doesn't exist
 			SONIC.physiccup.counter[0] ++;
 			SONIC.physiccup.counter[1] = 0;
 			if(SONIC.physiccup.counter[0] > 150){
@@ -82,6 +91,7 @@ void TMR1_IRQHandler(void)
 				SONIC.physiccup.exist = 0;
 			}
 		}else{
+			//CUP do exist
 			SONIC.physiccup.counter[1] ++;
 			SONIC.physiccup.counter[0] = 0;
 			if(SONIC.physiccup.counter[1] > 200){

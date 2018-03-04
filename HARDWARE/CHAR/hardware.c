@@ -16,7 +16,7 @@ void IOCUP_Init(void)
 		  U10-12 (P24)		  P13	  ==> 	SONIC_BIT0			输入  ==>命令2
 	3、超声波控制
 		检测水杯是否存在	U11-1    ==> P1.2					输入
-		脉冲触发(Trig)		U11-18	 ==> P0.5					输出
+		脉冲触发(Trig)		U11-9	 ==> P5.1					输出
 		电平检测(Echo)		U11-6	 ==> P3.2					输入
 
 	*/
@@ -34,14 +34,15 @@ void IOCUP_Init(void)
 	P3->PMD |= 1 << 5*2;
 	P3->DOUT &= ~(1 << 5);
 	/*****************************************/
+	//CUP Exit
 	P1->PMD &= ~(3 << 2*2);		//P12
-    
-//    P1->PMD &= ~(3 << 4*2);     //P14
-//    P1->PMD |= 1 << 4*2;
-//    P1->DOUT &= ~(1 << 4);
-    P0->PMD &= ~(3 << 5*2);     //P05
-    P0->PMD |= 1 << 5*2;
-    P0->DOUT &= ~(1 << 5);
+	/*
+		Plus Trig
+		P5.1
+	*/
+	P5->PMD &= ~(3 << 1*2);
+	P5->PMD |= 1 << 1*2;
+	P5->DOUT &= ~(1 << 1);
 	/**********************************/
 	//P32 ==> 定时器脉冲宽度检测(T0EX)
     SYS->P3_MFP |= 1 << (2 + 8);
@@ -241,36 +242,24 @@ Typedef_SONIC SONIC =
 void SONIC_Signal_detect(Typedef_SONIC *sonic)
 {
 /*********************************************************************/
-	//CMD_BIT0信号检测
-	if(CMD_CUP_BIT0 == 0){
-		SONIC.cmd.detect.counter_bit0[0] ++;
-		SONIC.cmd.detect.counter_bit0[1] = 0;
-		if(SONIC.cmd.detect.counter_bit0[0] > 500){
-			SONIC.cmd.detect.counter_bit0[0] = 0;
-			SONIC.cmd.detect.bit[0] = 0;
-        }
-	}else{
-		SONIC.cmd.detect.counter_bit0[1] ++;
-		SONIC.cmd.detect.counter_bit0[0] = 0;
-		if(SONIC.cmd.detect.counter_bit0[1] > 500){
-			SONIC.cmd.detect.counter_bit0[1] = 0;
-			SONIC.cmd.detect.bit[0] = 1;
+	u8 bit1bit0 = P2->PIN >> 4;
+	u8 i = 0;
+	bit1bit0 &= ~0XFC;
+	for(i = 0;i < 4;i ++){
+		if(bit1bit0 == i){
+			SONIC.cmd.detect.counter_bit1bit0[i] ++;
+			if(SONIC.cmd.detect.counter_bit1bit0[i] > 500){
+				SONIC.cmd.detect.counter_bit1bit0[i] = 0;
+				switch(i){
+					case SONIC_CMD_00:SONIC.cmd.detect.bit[1] = 0;SONIC.cmd.detect.bit[0] = 0;break;
+					case SONIC_CMD_01:SONIC.cmd.detect.bit[1] = 0;SONIC.cmd.detect.bit[0] = 1;break;
+					case SONIC_CMD_10:SONIC.cmd.detect.bit[1] = 1;SONIC.cmd.detect.bit[0] = 0;break;
+					case SONIC_CMD_11:SONIC.cmd.detect.bit[1] = 1;SONIC.cmd.detect.bit[0] = 1;break;
+				}
+			}
 		}
-	}
-	//CMD_BIT1信号检测
-	if(CMD_CUP_BIT1 == 0){
-		SONIC.cmd.detect.counter_bit1[0] ++;
-		SONIC.cmd.detect.counter_bit1[1] = 0;
-		if(SONIC.cmd.detect.counter_bit1[0] > 500){
-			SONIC.cmd.detect.counter_bit1[0] = 0;
-			SONIC.cmd.detect.bit[1] = 0;
-		}
-	}else{
-		SONIC.cmd.detect.counter_bit1[1] ++;
-		SONIC.cmd.detect.counter_bit1[0] = 0;
-		if(SONIC.cmd.detect.counter_bit1[1] > 500){
-			SONIC.cmd.detect.counter_bit1[1] = 0;
-			SONIC.cmd.detect.bit[1] = 1;
+		else{
+			SONIC.cmd.detect.counter_bit1bit0[i] = 0;
 		}
 	}
 /*********************************************************************/	
@@ -363,7 +352,7 @@ void SONIC_cmd_parse(Typedef_SONIC *sonic)
 			FLAG.sendplus = 1;
 		break;
 		
-		case SONIC_CMD_11://强制加水状态,设置也为10
+		case SONIC_CMD_10://强制加水状态,设置也为10
 			FLAG.cupsetted = 0;//控制在设置完成时只进行一次数据保存
 			FLAG.setcup = 0;
 		
@@ -380,7 +369,7 @@ void SONIC_cmd_parse(Typedef_SONIC *sonic)
 			FLAG.sendplus = 1;
 		break;
 		
-		case SONIC_CMD_10://设置完成状态，可以对参数进行保存
+		case SONIC_CMD_11://设置完成状态，可以对参数进行保存
 			if(SONIC.physiccup.exist == 1){//若水杯不存在，保存无效
 				if(FLAG.cupsetted == 0)
 				{
@@ -416,26 +405,41 @@ void SONIC_send_cmd(Typedef_SONIC *sonic)
 	/******************************************************/
 	//发送是否加水信息到治疗机控制板
 	if(SONIC.send.send_cmd)
-		OUTPUT_CUP_FULL = 1;
+		OUTPUT_CUP_FULL = !CUP_STOP_WATER;
 	else
-		OUTPUT_CUP_FULL = 0;
+		OUTPUT_CUP_FULL = CUP_STOP_WATER;
 	//是否存在水杯输出
 	if(SONIC.physiccup.exist){
         if(TIMEPARAM.level.level == SONIC_ERROR_VALUE){
             if(sonic->cmd.cmd == SONIC_CMD_00)
-                OUTPUT_CUP_EXIST = 1;
+                OUTPUT_CUP_EXIST = CUP_EXIST;
             else
-                OUTPUT_CUP_EXIST = 0;
-        }else OUTPUT_CUP_EXIST = 1;
+                OUTPUT_CUP_EXIST = !CUP_EXIST;
+        }else OUTPUT_CUP_EXIST = CUP_EXIST;
     }
 	else
-		OUTPUT_CUP_EXIST = 0;
+		OUTPUT_CUP_EXIST = !CUP_EXIST;
 }
 void SONIC_overall_control(void)
 {
-    if(TIMEPARAM.level.level < TIMEPARAM.level.cup + 30){
-        FLAG.level_get = 1;
-    }else FLAG.level_get = 0;
+	if(FLAG.level_get == 0){
+		//Adding the water
+		if(TIMEPARAM.level.level > TIMEPARAM.level.cup - 5
+			&& TIMEPARAM.level.level < TIMEPARAM.level.cup + 5){
+			FLAG.level_get = 1;
+			return;
+		}
+		if(TIMEPARAM.level.level < TIMEPARAM.level.cup - 20){
+			FLAG.level_get = 1;
+		}else{
+			FLAG.level_get = 0;
+		}
+	}else if(FLAG.level_get == 1){
+		//stopping the water
+		if(TIMEPARAM.level.level > TIMEPARAM.level.cup + 20){
+			FLAG.level_get = 0;
+		}else FLAG.level_get = 1;
+	}
 }
 
 /**********************************************************************/

@@ -6,8 +6,7 @@
 /*--------I/O设置----*/
 #define LED   			        P34        
 #define INBCUP                  P34
-//#define TRIG                    P14
-#define TRIG                    P05
+#define TRIG                    P51
 /******************************************************/
 //治疗机与超声波板的通信
 #define CMD_CUP_BIT3			P35
@@ -22,6 +21,10 @@
 /******************************************************/
 #define OUTPUT_CUP_EXIST	CMD_CUP_BIT3
 #define OUTPUT_CUP_FULL		CMD_CUP_BIT2
+#define CUP_EXIST			0
+#define CUP_DOESNT_EXIST	1
+#define CUP_ADD_WATER		1
+#define CUP_STOP_WATER		0
 /******************************************************/
 //在FLASH中的偏移位置
 #define OFFSET_CUP              0X00
@@ -86,6 +89,7 @@ typedef struct
 			u16 counter_bit0[2];
 			u16 counter_bit1[2];
 			u8 bit[2];
+			u16 counter_bit1bit0[4];
 		}detect;
 	}cmd;
 	struct{
