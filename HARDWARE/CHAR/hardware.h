@@ -95,6 +95,8 @@ typedef struct
 	struct{
 		u8 exist:1;
 		u16 counter[2];
+		u8 getlevel_delay:1;
+		u16 getlevel_delaycount;
 	}physiccup;
 	struct{
 		u8 send_cmd;

@@ -168,7 +168,14 @@ void Sonic_cappre_filter(void)
     average = sum >> 3;
     TIMEPARAM.level.level = average;
     TIMEPARAM.pre.filtered = 1;
-    /******************************************************/    
+    /******************************************************/
+	if(SONIC.physiccup.getlevel_delay){
+		SONIC.physiccup.getlevel_delaycount ++;
+		if(SONIC.physiccup.getlevel_delaycount >= 2){
+			SONIC.physiccup.getlevel_delay = 0;
+			SONIC.physiccup.getlevel_delaycount = 0;
+		}
+	}
 }
 //超过了时间
 void Sonic_timeout(void)
@@ -228,6 +235,8 @@ Typedef_SONIC SONIC =
 	{
 		0,//exist
 		{0},//counter
+		0,//getlevel_delay
+		0,//getlevel_delaycount
 		
 	},//physiccup
 	{
@@ -269,8 +278,11 @@ void SONIC_Signal_detect(Typedef_SONIC *sonic)
 	if(IS_PHYSIC_CUP_INPUT == 0){
 		SONIC.physiccup.counter[0] ++;
 		SONIC.physiccup.counter[1] = 0;
-		if(SONIC.physiccup.counter[0] > 80){
+		if(SONIC.physiccup.counter[0] > 5000){
 			SONIC.physiccup.counter[0] = 0;
+			if(SONIC.physiccup.exist == 0){
+				SONIC.physiccup.getlevel_delay = 1;
+			}
 			SONIC.physiccup.exist = 1;
 		}
 	}else{
@@ -396,6 +408,11 @@ void Sonic_cupset(void)
 }
 void SONIC_send_cmd(Typedef_SONIC *sonic)
 {
+	if(SONIC.physiccup.getlevel_delay){
+		if(SONIC.cmd.cmd == 1){
+			return;
+		}
+	}
 	/******************************************************/
 	//判断是否加水的条件
 	if(FLAG.level_get == 0 && SONIC.physiccup.exist)//液位没到,并且有杯子存在的情况通知治疗机加水
